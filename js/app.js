@@ -1,8 +1,8 @@
 (() => {
   'use strict';
 
-  const STORAGE_EXPENSES = 'panoramaerp_expenses';
-  const STORAGE_DEADLINES = 'panoramaerp_deadlines';
+  const STORAGE_EXPENSES = 'ppc_expenses';
+  const STORAGE_DEADLINES = 'ppc_deadlines';
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -382,7 +382,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `panoramaerp-backup-${todayISO()}.json`;
+    a.download = `ppc-backup-${todayISO()}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();

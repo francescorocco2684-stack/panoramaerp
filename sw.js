@@ -1,4 +1,4 @@
-const CACHE_NAME = 'panoramaerp-v1';
+const CACHE_NAME = 'ppc-v1';
 const APP_SHELL = [
   './',
   './index.html',

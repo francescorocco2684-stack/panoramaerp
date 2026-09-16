@@ -53,7 +53,7 @@ body {
   top: 0;
   z-index: 10;
 }
-.app-header h1 { font-size: 20px; margin: 0; }
+.app-header h1 { font-size: 17px; margin: 0; line-height: 1.2; }
 
 .icon-btn {
   background: none;

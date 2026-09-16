@@ -1,6 +1,6 @@
 {
-  "name": "PanoramaERP - Spese & Scadenze",
-  "short_name": "PanoramaERP",
+  "name": "Panorama Personal Check - Spese & Scadenze",
+  "short_name": "PPC",
   "description": "Tieni traccia delle tue spese e delle scadenze economiche",
   "start_url": "./index.html",
   "scope": "./",
