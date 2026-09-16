@@ -3,6 +3,7 @@
 
   const STORAGE_EXPENSES = 'ppc_expenses';
   const STORAGE_DEADLINES = 'ppc_deadlines';
+  const STORAGE_INSTALLMENTS = 'ppc_installments';
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -37,9 +38,11 @@
 
   let expenses = Store.load(STORAGE_EXPENSES);
   let deadlines = Store.load(STORAGE_DEADLINES);
+  let installments = Store.load(STORAGE_INSTALLMENTS);
 
   function saveExpenses() { Store.save(STORAGE_EXPENSES, expenses); }
   function saveDeadlines() { Store.save(STORAGE_DEADLINES, deadlines); }
+  function saveInstallments() { Store.save(STORAGE_INSTALLMENTS, installments); }
 
   // ---------- Toast ----------
   let toastTimer;
@@ -52,7 +55,13 @@
   }
 
   // ---------- Navigation ----------
-  const views = { dashboard: '#view-dashboard', expenses: '#view-expenses', deadlines: '#view-deadlines' };
+  const views = {
+    dashboard: '#view-dashboard',
+    expenses: '#view-expenses',
+    deadlines: '#view-deadlines',
+    installments: '#view-installments',
+    charts: '#view-charts'
+  };
   let currentView = 'dashboard';
 
   function switchView(name) {
@@ -99,6 +108,7 @@
     if (currentView === 'dashboard') renderDashboard();
     if (currentView === 'expenses') renderExpensesView();
     if (currentView === 'deadlines') renderDeadlinesView();
+    if (currentView === 'installments') renderInstallmentsView();
   }
 
   function renderDashboard() {
@@ -211,6 +221,65 @@
     attachItemHandlers(el);
   }
 
+  function monthsBetweenInclusive(startISO, endISO) {
+    const s = new Date(startISO + 'T00:00:00');
+    const e = new Date(endISO + 'T00:00:00');
+    return (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()) + 1;
+  }
+
+  function isInstallmentActive(item) {
+    const t = todayISO();
+    return t >= item.startDate && t <= item.endDate;
+  }
+
+  function renderInstallmentsView() {
+    const sorted = [...installments].sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const active = installments.filter(isInstallmentActive);
+    const activeMonthlyTotal = active.reduce((s, i) => s + Number(i.amount), 0);
+    $('#installments-total').textContent = active.length === 0
+      ? 'Nessuna rata attiva'
+      : `Rate attive: ${active.length} · Impegno mensile: ${euro(activeMonthlyTotal)}`;
+
+    const list = $('#list-installments');
+    if (sorted.length === 0) {
+      list.innerHTML = '<li class="empty-state">Nessuna rata registrata</li>';
+      return;
+    }
+    list.innerHTML = sorted.map(renderInstallmentItem).join('');
+    attachItemHandlers(list);
+  }
+
+  function renderInstallmentItem(item) {
+    const totalMonths = Math.max(1, monthsBetweenInclusive(item.startDate, item.endDate));
+    const today = todayISO();
+    let paidMonths;
+    if (today < item.startDate) paidMonths = 0;
+    else if (today > item.endDate) paidMonths = totalMonths;
+    else paidMonths = monthsBetweenInclusive(item.startDate, today);
+    paidMonths = Math.min(totalMonths, Math.max(0, paidMonths));
+    const remainingMonths = totalMonths - paidMonths;
+    const pct = Math.round((paidMonths / totalMonths) * 100);
+
+    let badge;
+    if (today > item.endDate) badge = `<span class="badge badge-done">Completata</span>`;
+    else if (today < item.startDate) badge = `<span class="badge badge-soon">Da iniziare</span>`;
+    else badge = `<span class="badge badge-active">In corso</span>`;
+
+    return `
+      <li class="item" data-id="${item.id}" data-type="installment">
+        <div class="item-main">
+          <span class="item-desc">${escapeHtml(item.description)}${badge}</span>
+          <span class="item-meta">${escapeHtml(item.category)} · ${formatDate(item.startDate)} → ${formatDate(item.endDate)}</span>
+          <span class="item-meta">Rata ${paidMonths}/${totalMonths} · ${remainingMonths} rimanenti</span>
+          <span class="chart-bar-wrap installment-progress"><span class="chart-bar" style="width:${pct}%"></span></span>
+        </div>
+        <div class="item-amount-wrap">
+          <span class="item-amount expense">${euro(item.amount)}</span>
+          <span class="item-meta">/mese</span>
+        </div>
+      </li>`;
+  }
+
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
@@ -227,36 +296,57 @@
   let modalType = 'expense';
   let editingId = null;
 
+  const TYPE_LABELS = {
+    expense: { title: 'Nuova spesa', date: 'Data', amount: 'Importo (€)' },
+    deadline: { title: 'Nuova scadenza', date: 'Scadenza', amount: 'Importo (€)' },
+    installment: { title: 'Nuova rata', date: 'Data inizio', amount: 'Importo rata mensile (€)' }
+  };
+
   function setModalType(type) {
     modalType = type;
     $$('.type-btn').forEach((b) => b.classList.toggle('active', b.dataset.type === type));
-    $('#field-date-label').textContent = type === 'expense' ? 'Data' : 'Scadenza';
+    const labels = TYPE_LABELS[type];
+    $('#field-date-label').textContent = labels.date;
+    $('#field-amount-label').textContent = labels.amount;
     $('#field-recurring-wrap').hidden = type !== 'deadline';
-    $('#modal-title').textContent = editingId ? 'Modifica' : (type === 'expense' ? 'Nuova spesa' : 'Nuova scadenza');
+    $('#field-date-end-wrap').hidden = type !== 'installment';
+    $('#field-date-end').required = type === 'installment';
+    $('#modal-title').textContent = editingId ? 'Modifica' : labels.title;
   }
 
   $$('.type-btn').forEach((btn) => btn.addEventListener('click', () => setModalType(btn.dataset.type)));
+
+  function collectionForType(type) {
+    if (type === 'expense') return expenses;
+    if (type === 'deadline') return deadlines;
+    return installments;
+  }
 
   function openAddModal() {
     editingId = null;
     form.reset();
     $('#entry-id').value = '';
     $('#field-date').value = todayISO();
+    $('#field-date-end').value = '';
     $('#field-recurring').value = 'none';
     $('#btn-delete').hidden = true;
-    setModalType(currentView === 'deadlines' ? 'deadline' : 'expense');
+    let defaultType = 'expense';
+    if (currentView === 'deadlines') defaultType = 'deadline';
+    if (currentView === 'installments') defaultType = 'installment';
+    setModalType(defaultType);
     overlay.hidden = false;
   }
 
   function openEditModal(type, id) {
     editingId = id;
-    const item = (type === 'expense' ? expenses : deadlines).find((x) => x.id === id);
+    const item = collectionForType(type).find((x) => x.id === id);
     if (!item) return;
     $('#entry-id').value = id;
     $('#field-description').value = item.description;
     $('#field-amount').value = item.amount;
     $('#field-category').value = item.category;
-    $('#field-date').value = type === 'expense' ? item.date : item.dueDate;
+    $('#field-date').value = type === 'expense' ? item.date : (type === 'deadline' ? item.dueDate : item.startDate);
+    $('#field-date-end').value = type === 'installment' ? item.endDate : '';
     $('#field-note').value = item.note || '';
     $('#field-recurring').value = item.recurring || 'none';
     $('#btn-delete').hidden = false;
@@ -297,9 +387,11 @@
     const amount = parseFloat($('#field-amount').value);
     const category = $('#field-category').value;
     const date = $('#field-date').value;
+    const dateEnd = $('#field-date-end').value;
     const note = $('#field-note').value.trim();
 
     if (!description || isNaN(amount) || !date) return;
+    if (modalType === 'installment' && (!dateEnd || dateEnd < date)) return;
 
     if (modalType === 'expense') {
       if (editingId) {
@@ -309,7 +401,7 @@
         expenses.push({ id: uid(), description, amount, category, date, note });
       }
       saveExpenses();
-    } else {
+    } else if (modalType === 'deadline') {
       const recurring = $('#field-recurring').value;
       if (editingId) {
         const item = deadlines.find((x) => x.id === editingId);
@@ -318,6 +410,14 @@
         deadlines.push({ id: uid(), description, amount, category, dueDate: date, note, recurring, paid: false, paidDate: null });
       }
       saveDeadlines();
+    } else {
+      if (editingId) {
+        const item = installments.find((x) => x.id === editingId);
+        Object.assign(item, { description, amount, category, startDate: date, endDate: dateEnd, note });
+      } else {
+        installments.push({ id: uid(), description, amount, category, startDate: date, endDate: dateEnd, note });
+      }
+      saveInstallments();
     }
 
     closeModal();
@@ -330,9 +430,12 @@
     if (modalType === 'expense') {
       expenses = expenses.filter((x) => x.id !== editingId);
       saveExpenses();
-    } else {
+    } else if (modalType === 'deadline') {
       deadlines = deadlines.filter((x) => x.id !== editingId);
       saveDeadlines();
+    } else {
+      installments = installments.filter((x) => x.id !== editingId);
+      saveInstallments();
     }
     closeModal();
     render();
@@ -377,7 +480,7 @@
 
   // ---------- Export ----------
   $('#btn-export').addEventListener('click', () => {
-    const data = { expenses, deadlines, exportedAt: new Date().toISOString() };
+    const data = { expenses, deadlines, installments, exportedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
