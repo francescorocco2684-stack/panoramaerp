@@ -1,4 +1,4 @@
-# PanoramaERP
+# Panorama Personal Check (PPC)
 
 App web (PWA) per tenere traccia delle tue **spese** e delle **scadenze economiche** (bollette, rate, abbonamenti, ecc.), installabile sul telefono come un'app senza bisogno di app store.
 
@@ -26,7 +26,7 @@ Poi apri `http://localhost:8080` dal browser del telefono (stessa rete Wi-Fi del
 1. Apri l'URL dell'app in Chrome sul telefono.
 2. Tocca il menu (⋮) in alto a destra.
 3. Seleziona **"Installa app"** oppure **"Aggiungi a schermata Home"**.
-4. L'icona di PanoramaERP comparirà come una normale app, a schermo intero, funzionante anche offline.
+4. L'icona di Panorama Personal Check comparirà come una normale app, a schermo intero, funzionante anche offline.
 
 ## Pubblicazione online (per usarla dal telefono ovunque)
 
