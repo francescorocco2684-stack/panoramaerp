@@ -26,6 +26,14 @@
       <span class="card-label">Spese questo mese</span>
       <span class="card-value" id="sum-expenses-month">€0,00</span>
     </div>
+    <div class="card card-entrate">
+      <span class="card-label">Entrate questo mese</span>
+      <span class="card-value" id="sum-income-month">€0,00</span>
+    </div>
+    <div class="card card-saldo">
+      <span class="card-label">Saldo del mese</span>
+      <span class="card-value" id="sum-balance-month">€0,00</span>
+    </div>
     <div class="card card-da-pagare">
       <span class="card-label">Da pagare</span>
       <span class="card-value" id="sum-unpaid">€0,00</span>
@@ -75,6 +83,27 @@
   <ul class="item-list" id="list-installments"></ul>
 </main>
 
+<main id="view-incomes" class="view" hidden>
+  <div class="filter-tabs">
+    <button class="filter-tab active" data-income-filter="entrate">Entrate</button>
+    <button class="filter-tab" data-income-filter="ricorrenti">Ricorrenti</button>
+  </div>
+
+  <div id="income-entrate-panel">
+    <div class="month-switcher">
+      <button id="income-prev" class="icon-btn" aria-label="Mese precedente">‹</button>
+      <span id="income-month-label">-</span>
+      <button id="income-next" class="icon-btn" aria-label="Mese successivo">›</button>
+    </div>
+    <div class="list-total" id="income-total">Totale: €0,00</div>
+    <ul class="item-list" id="list-incomes"></ul>
+  </div>
+
+  <div id="income-ricorrenti-panel" hidden>
+    <ul class="item-list" id="list-income-schedules"></ul>
+  </div>
+</main>
+
 <main id="view-charts" class="view" hidden>
   <section class="panel">
     <p class="empty-state">Sezione grafici in arrivo.</p>
@@ -94,6 +123,9 @@
   <button class="nav-btn" data-view="installments">
     <span class="nav-icon">↻</span><span>Rate</span>
   </button>
+  <button class="nav-btn" data-view="incomes">
+    <span class="nav-icon">💰</span><span>Guadagni</span>
+  </button>
   <button class="nav-btn" data-view="charts">
     <span class="nav-icon">📊</span><span>Grafici</span>
   </button>
@@ -108,10 +140,15 @@
       <button id="modal-close" class="icon-btn" aria-label="Chiudi">✕</button>
     </div>
 
-    <div class="type-toggle">
+    <div class="type-toggle" id="type-toggle-expense">
       <button type="button" class="type-btn active" data-type="expense">Spesa</button>
       <button type="button" class="type-btn" data-type="deadline">Scadenza</button>
       <button type="button" class="type-btn" data-type="installment">Rata</button>
+    </div>
+
+    <div class="type-toggle" id="type-toggle-income" hidden>
+      <button type="button" class="type-btn" data-type="income">Entrata</button>
+      <button type="button" class="type-btn" data-type="income_recurring">Entrata ricorrente</button>
     </div>
 
     <form id="entry-form">
@@ -129,18 +166,7 @@
 
       <label class="field">
         <span>Categoria</span>
-        <select id="field-category">
-          <option>Bollette</option>
-          <option>Affitto/Mutuo</option>
-          <option>Spesa</option>
-          <option>Trasporti</option>
-          <option>Assicurazioni</option>
-          <option>Tasse</option>
-          <option>Abbonamenti</option>
-          <option>Salute</option>
-          <option>Svago</option>
-          <option>Altro</option>
-        </select>
+        <select id="field-category"></select>
       </label>
 
       <label class="field" id="field-date-wrap">
