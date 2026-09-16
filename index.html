@@ -70,6 +70,17 @@
   <ul class="item-list" id="list-deadlines"></ul>
 </main>
 
+<main id="view-installments" class="view" hidden>
+  <div class="list-total" id="installments-total">Nessuna rata attiva</div>
+  <ul class="item-list" id="list-installments"></ul>
+</main>
+
+<main id="view-charts" class="view" hidden>
+  <section class="panel">
+    <p class="empty-state">Sezione grafici in arrivo.</p>
+  </section>
+</main>
+
 <nav class="bottom-nav">
   <button class="nav-btn active" data-view="dashboard">
     <span class="nav-icon">⌂</span><span>Dashboard</span>
@@ -79,6 +90,12 @@
   </button>
   <button class="nav-btn" data-view="deadlines">
     <span class="nav-icon">⏰</span><span>Scadenze</span>
+  </button>
+  <button class="nav-btn" data-view="installments">
+    <span class="nav-icon">↻</span><span>Rate</span>
+  </button>
+  <button class="nav-btn" data-view="charts">
+    <span class="nav-icon">📊</span><span>Grafici</span>
   </button>
 </nav>
 
@@ -94,6 +111,7 @@
     <div class="type-toggle">
       <button type="button" class="type-btn active" data-type="expense">Spesa</button>
       <button type="button" class="type-btn" data-type="deadline">Scadenza</button>
+      <button type="button" class="type-btn" data-type="installment">Rata</button>
     </div>
 
     <form id="entry-form">
@@ -105,7 +123,7 @@
       </label>
 
       <label class="field">
-        <span>Importo (€)</span>
+        <span id="field-amount-label">Importo (€)</span>
         <input type="number" id="field-amount" required step="0.01" min="0" inputmode="decimal" placeholder="0,00">
       </label>
 
@@ -128,6 +146,11 @@
       <label class="field" id="field-date-wrap">
         <span id="field-date-label">Data</span>
         <input type="date" id="field-date" required>
+      </label>
+
+      <label class="field" id="field-date-end-wrap" hidden>
+        <span>Data fine</span>
+        <input type="date" id="field-date-end">
       </label>
 
       <label class="field" id="field-recurring-wrap" hidden>
