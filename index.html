@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="description" content="Tieni traccia delle tue spese e delle scadenze economiche">
+<title>PanoramaERP</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <h1>PanoramaERP</h1>
+  <button id="btn-export" class="icon-btn" title="Esporta backup" aria-label="Esporta backup">⇩</button>
+</header>
+
+<main id="view-dashboard" class="view">
+  <section class="summary-cards">
+    <div class="card card-spese">
+      <span class="card-label">Spese questo mese</span>
+      <span class="card-value" id="sum-expenses-month">€0,00</span>
+    </div>
+    <div class="card card-da-pagare">
+      <span class="card-label">Da pagare</span>
+      <span class="card-value" id="sum-unpaid">€0,00</span>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-overdue" hidden>
+    <h2 class="panel-title panel-title-danger">Scadute</h2>
+    <ul class="item-list" id="list-overdue"></ul>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel-title">Prossime scadenze (7 giorni)</h2>
+    <ul class="item-list" id="list-upcoming">
+      <li class="empty-state">Nessuna scadenza imminente</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel-title">Spese per categoria</h2>
+    <div class="chart" id="chart-categories">
+      <p class="empty-state">Nessuna spesa questo mese</p>
+    </div>
+  </section>
+</main>
+
+<main id="view-expenses" class="view" hidden>
+  <div class="month-switcher">
+    <button id="expenses-prev" class="icon-btn" aria-label="Mese precedente">‹</button>
+    <span id="expenses-month-label">-</span>
+    <button id="expenses-next" class="icon-btn" aria-label="Mese successivo">›</button>
+  </div>
+  <div class="list-total" id="expenses-total">Totale: €0,00</div>
+  <ul class="item-list" id="list-expenses"></ul>
+</main>
+
+<main id="view-deadlines" class="view" hidden>
+  <div class="filter-tabs">
+    <button class="filter-tab active" data-filter="open">Da pagare</button>
+    <button class="filter-tab" data-filter="paid">Pagate</button>
+  </div>
+  <ul class="item-list" id="list-deadlines"></ul>
+</main>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-view="dashboard">
+    <span class="nav-icon">⌂</span><span>Dashboard</span>
+  </button>
+  <button class="nav-btn" data-view="expenses">
+    <span class="nav-icon">€</span><span>Spese</span>
+  </button>
+  <button class="nav-btn" data-view="deadlines">
+    <span class="nav-icon">⏰</span><span>Scadenze</span>
+  </button>
+</nav>
+
+<button id="fab" class="fab" aria-label="Aggiungi">+</button>
+
+<div id="modal-overlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Nuova spesa</h2>
+      <button id="modal-close" class="icon-btn" aria-label="Chiudi">✕</button>
+    </div>
+
+    <div class="type-toggle">
+      <button type="button" class="type-btn active" data-type="expense">Spesa</button>
+      <button type="button" class="type-btn" data-type="deadline">Scadenza</button>
+    </div>
+
+    <form id="entry-form">
+      <input type="hidden" id="entry-id">
+
+      <label class="field">
+        <span>Descrizione</span>
+        <input type="text" id="field-description" required placeholder="Es. Bolletta luce">
+      </label>
+
+      <label class="field">
+        <span>Importo (€)</span>
+        <input type="number" id="field-amount" required step="0.01" min="0" inputmode="decimal" placeholder="0,00">
+      </label>
+
+      <label class="field">
+        <span>Categoria</span>
+        <select id="field-category">
+          <option>Bollette</option>
+          <option>Affitto/Mutuo</option>
+          <option>Spesa</option>
+          <option>Trasporti</option>
+          <option>Assicurazioni</option>
+          <option>Tasse</option>
+          <option>Abbonamenti</option>
+          <option>Salute</option>
+          <option>Svago</option>
+          <option>Altro</option>
+        </select>
+      </label>
+
+      <label class="field" id="field-date-wrap">
+        <span id="field-date-label">Data</span>
+        <input type="date" id="field-date" required>
+      </label>
+
+      <label class="field" id="field-recurring-wrap" hidden>
+        <span>Ricorrenza</span>
+        <select id="field-recurring">
+          <option value="none">Nessuna</option>
+          <option value="monthly">Mensile</option>
+          <option value="yearly">Annuale</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Note (opzionale)</span>
+        <input type="text" id="field-note" placeholder="Facoltativo">
+      </label>
+
+      <div class="modal-actions">
+        <button type="button" id="btn-delete" class="btn btn-danger" hidden>Elimina</button>
+        <button type="submit" class="btn btn-primary">Salva</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
