@@ -4,6 +4,12 @@
   const STORAGE_EXPENSES = 'ppc_expenses';
   const STORAGE_DEADLINES = 'ppc_deadlines';
   const STORAGE_INSTALLMENTS = 'ppc_installments';
+  const STORAGE_INCOMES = 'ppc_incomes';
+  const STORAGE_INCOME_SCHEDULES = 'ppc_income_schedules';
+  const STORAGE_CUSTOM_CATEGORIES = 'ppc_custom_categories';
+
+  const EXPENSE_CATEGORIES = ['Bollette', 'Affitto/Mutuo', 'Spesa', 'Trasporti', 'Assicurazioni', 'Tasse', 'Abbonamenti', 'Salute', 'Svago', 'Altro'];
+  const INCOME_CATEGORIES = ['Stipendio', 'Freelance', 'Bonus', 'Rimborso', 'Regalo', 'Altra entrata'];
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -39,10 +45,16 @@
   let expenses = Store.load(STORAGE_EXPENSES);
   let deadlines = Store.load(STORAGE_DEADLINES);
   let installments = Store.load(STORAGE_INSTALLMENTS);
+  let incomes = Store.load(STORAGE_INCOMES);
+  let incomeSchedules = Store.load(STORAGE_INCOME_SCHEDULES);
+  let customCategories = Store.load(STORAGE_CUSTOM_CATEGORIES);
 
   function saveExpenses() { Store.save(STORAGE_EXPENSES, expenses); }
   function saveDeadlines() { Store.save(STORAGE_DEADLINES, deadlines); }
   function saveInstallments() { Store.save(STORAGE_INSTALLMENTS, installments); }
+  function saveIncomes() { Store.save(STORAGE_INCOMES, incomes); }
+  function saveIncomeSchedules() { Store.save(STORAGE_INCOME_SCHEDULES, incomeSchedules); }
+  function saveCustomCategories() { Store.save(STORAGE_CUSTOM_CATEGORIES, customCategories); }
 
   // ---------- Toast ----------
   let toastTimer;
@@ -60,6 +72,7 @@
     expenses: '#view-expenses',
     deadlines: '#view-deadlines',
     installments: '#view-installments',
+    incomes: '#view-incomes',
     charts: '#view-charts'
   };
   let currentView = 'dashboard';
@@ -95,12 +108,36 @@
 
   // ---------- Deadlines filter ----------
   let deadlineFilter = 'open';
-  $$('.filter-tab').forEach((tab) => {
+  $$('#view-deadlines .filter-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       deadlineFilter = tab.dataset.filter;
-      $$('.filter-tab').forEach((t) => t.classList.toggle('active', t === tab));
+      $$('#view-deadlines .filter-tab').forEach((t) => t.classList.toggle('active', t === tab));
       renderDeadlinesView();
     });
+  });
+
+  // ---------- Income sub-tab & month filter ----------
+  let incomeSubTab = 'entrate';
+  let incomeMonthCursor = new Date();
+  incomeMonthCursor.setDate(1);
+
+  $$('#view-incomes .filter-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      incomeSubTab = tab.dataset.incomeFilter;
+      $$('#view-incomes .filter-tab').forEach((t) => t.classList.toggle('active', t === tab));
+      $('#income-entrate-panel').hidden = incomeSubTab !== 'entrate';
+      $('#income-ricorrenti-panel').hidden = incomeSubTab !== 'ricorrenti';
+      renderIncomesView();
+    });
+  });
+
+  $('#income-prev').addEventListener('click', () => {
+    incomeMonthCursor.setMonth(incomeMonthCursor.getMonth() - 1);
+    renderIncomesView();
+  });
+  $('#income-next').addEventListener('click', () => {
+    incomeMonthCursor.setMonth(incomeMonthCursor.getMonth() + 1);
+    renderIncomesView();
   });
 
   // ---------- Rendering ----------
@@ -109,6 +146,13 @@
     if (currentView === 'expenses') renderExpensesView();
     if (currentView === 'deadlines') renderDeadlinesView();
     if (currentView === 'installments') renderInstallmentsView();
+    if (currentView === 'incomes') renderIncomesView();
+  }
+
+  function euroSigned(n) {
+    const num = Number(n) || 0;
+    const sign = num > 0 ? '+' : (num < 0 ? '-' : '');
+    return sign + '€' + Math.abs(num).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function renderDashboard() {
@@ -116,6 +160,16 @@
     const monthExpenses = expenses.filter((e) => isSameMonth(e.date, now));
     const totalMonth = monthExpenses.reduce((s, e) => s + Number(e.amount), 0);
     $('#sum-expenses-month').textContent = euro(totalMonth);
+
+    const monthIncomes = incomes.filter((i) => isSameMonth(i.date, now));
+    const totalIncomeMonth = monthIncomes.reduce((s, i) => s + Number(i.amount), 0);
+    $('#sum-income-month').textContent = euro(totalIncomeMonth);
+
+    const balance = totalIncomeMonth - totalMonth;
+    const balanceEl = $('#sum-balance-month');
+    balanceEl.textContent = euroSigned(balance);
+    balanceEl.classList.toggle('positive', balance >= 0);
+    balanceEl.classList.toggle('negative', balance < 0);
 
     const unpaid = deadlines.filter((d) => !d.paid);
     const totalUnpaid = unpaid.reduce((s, d) => s + Number(d.amount), 0);
@@ -280,6 +334,62 @@
       </li>`;
   }
 
+  function renderIncomesView() {
+    if (incomeSubTab === 'entrate') renderIncomeEntriesView();
+    else renderIncomeSchedulesView();
+  }
+
+  function renderIncomeEntriesView() {
+    const label = incomeMonthCursor.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+    $('#income-month-label').textContent = label.charAt(0).toUpperCase() + label.slice(1);
+
+    const monthIncomes = incomes
+      .filter((i) => isSameMonth(i.date, incomeMonthCursor))
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    const total = monthIncomes.reduce((s, i) => s + Number(i.amount), 0);
+    $('#income-total').textContent = 'Totale: ' + euro(total);
+
+    const list = $('#list-incomes');
+    if (monthIncomes.length === 0) {
+      list.innerHTML = '<li class="empty-state">Nessuna entrata in questo mese</li>';
+      return;
+    }
+    list.innerHTML = monthIncomes.map((i) => `
+      <li class="item" data-id="${i.id}" data-type="income">
+        <div class="item-main">
+          <span class="item-desc">${escapeHtml(i.description)}</span>
+          <span class="item-meta">${escapeHtml(i.category)} · ${formatDate(i.date)}</span>
+        </div>
+        <span class="item-amount paid">+${euro(i.amount)}</span>
+      </li>`).join('');
+    attachItemHandlers(list);
+  }
+
+  function renderIncomeSchedulesView() {
+    const sorted = [...incomeSchedules].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    const list = $('#list-income-schedules');
+    if (sorted.length === 0) {
+      list.innerHTML = '<li class="empty-state">Nessuna entrata ricorrente configurata</li>';
+      return;
+    }
+    list.innerHTML = sorted.map((s) => {
+      const diff = daysBetween(s.dueDate);
+      let badge = '';
+      if (diff < 0) badge = `<span class="badge badge-overdue">In ritardo</span>`;
+      else if (diff <= 7) badge = `<span class="badge badge-soon">${diff === 0 ? 'Oggi' : diff + 'g'}</span>`;
+      return `
+      <li class="item" data-id="${s.id}" data-type="income_recurring">
+        <div class="item-main">
+          <span class="item-desc">${escapeHtml(s.description)}${badge}</span>
+          <span class="item-meta">${escapeHtml(s.category)} · prossima il ${formatDate(s.dueDate)} · ricorrente</span>
+        </div>
+        <span class="item-amount paid">+${euro(s.amount)}</span>
+      </li>`;
+    }).join('');
+    attachItemHandlers(list);
+  }
+
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
@@ -299,8 +409,32 @@
   const TYPE_LABELS = {
     expense: { title: 'Nuova spesa', date: 'Data', amount: 'Importo (€)' },
     deadline: { title: 'Nuova scadenza', date: 'Scadenza', amount: 'Importo (€)' },
-    installment: { title: 'Nuova rata', date: 'Data inizio', amount: 'Importo rata mensile (€)' }
+    installment: { title: 'Nuova rata', date: 'Data inizio', amount: 'Importo rata mensile (€)' },
+    income: { title: 'Nuova entrata', date: 'Data', amount: 'Importo (€)' },
+    income_recurring: { title: 'Nuova entrata ricorrente', date: 'Prossima data', amount: 'Importo previsto (€)' }
   };
+  const INCOME_TYPES = ['income', 'income_recurring'];
+
+  function populateCategorySelect(type) {
+    const base = INCOME_TYPES.includes(type) ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+    const options = [...base, ...customCategories.filter((c) => !base.includes(c))];
+    const select = $('#field-category');
+    const prevValue = select.value;
+    select.innerHTML = options.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')
+      + '<option value="__new__">+ Nuova categoria…</option>';
+    if (options.includes(prevValue)) select.value = prevValue;
+  }
+
+  $('#field-category').addEventListener('change', (e) => {
+    if (e.target.value !== '__new__') return;
+    const name = (window.prompt('Nome della nuova categoria:') || '').trim();
+    if (name && !customCategories.includes(name)) {
+      customCategories.push(name);
+      saveCustomCategories();
+    }
+    populateCategorySelect(modalType);
+    if (name) $('#field-category').value = name;
+  });
 
   function setModalType(type) {
     modalType = type;
@@ -308,10 +442,11 @@
     const labels = TYPE_LABELS[type];
     $('#field-date-label').textContent = labels.date;
     $('#field-amount-label').textContent = labels.amount;
-    $('#field-recurring-wrap').hidden = type !== 'deadline';
+    $('#field-recurring-wrap').hidden = !(type === 'deadline' || type === 'income_recurring');
     $('#field-date-end-wrap').hidden = type !== 'installment';
     $('#field-date-end').required = type === 'installment';
     $('#modal-title').textContent = editingId ? 'Modifica' : labels.title;
+    populateCategorySelect(type);
   }
 
   $$('.type-btn').forEach((btn) => btn.addEventListener('click', () => setModalType(btn.dataset.type)));
@@ -319,7 +454,9 @@
   function collectionForType(type) {
     if (type === 'expense') return expenses;
     if (type === 'deadline') return deadlines;
-    return installments;
+    if (type === 'installment') return installments;
+    if (type === 'income') return incomes;
+    return incomeSchedules;
   }
 
   function openAddModal() {
@@ -330,9 +467,16 @@
     $('#field-date-end').value = '';
     $('#field-recurring').value = 'none';
     $('#btn-delete').hidden = true;
+
+    const isIncomeView = currentView === 'incomes';
+    $('#type-toggle-expense').hidden = isIncomeView;
+    $('#type-toggle-income').hidden = !isIncomeView;
+
     let defaultType = 'expense';
     if (currentView === 'deadlines') defaultType = 'deadline';
     if (currentView === 'installments') defaultType = 'installment';
+    if (isIncomeView) defaultType = incomeSubTab === 'ricorrenti' ? 'income_recurring' : 'income';
+    if (defaultType === 'deadline' || defaultType === 'income_recurring') $('#field-recurring').value = 'monthly';
     setModalType(defaultType);
     overlay.hidden = false;
   }
@@ -344,16 +488,20 @@
     $('#entry-id').value = id;
     $('#field-description').value = item.description;
     $('#field-amount').value = item.amount;
-    $('#field-category').value = item.category;
-    $('#field-date').value = type === 'expense' ? item.date : (type === 'deadline' ? item.dueDate : item.startDate);
+    $('#field-date').value = (type === 'expense' || type === 'income') ? item.date
+      : (type === 'installment' ? item.startDate : item.dueDate);
     $('#field-date-end').value = type === 'installment' ? item.endDate : '';
     $('#field-note').value = item.note || '';
     $('#field-recurring').value = item.recurring || 'none';
     $('#btn-delete').hidden = false;
+    // Editing never changes the entry's fundamental type.
+    $('#type-toggle-expense').hidden = true;
+    $('#type-toggle-income').hidden = true;
     setModalType(type);
+    $('#field-category').value = item.category;
     overlay.hidden = false;
 
-    // Add "mark as paid" affordance for open deadlines
+    // Add "mark as done" affordance for open deadlines / income schedules
     toggleMarkPaidButton(type, item);
   }
 
@@ -368,6 +516,15 @@
       markPaidBtn.style.marginBottom = '10px';
       markPaidBtn.style.width = '100%';
       markPaidBtn.addEventListener('click', () => markDeadlinePaid(item.id));
+      $('.modal-actions').before(markPaidBtn);
+    } else if (type === 'income_recurring') {
+      markPaidBtn = document.createElement('button');
+      markPaidBtn.type = 'button';
+      markPaidBtn.className = 'btn btn-primary';
+      markPaidBtn.textContent = 'Segna come ricevuto';
+      markPaidBtn.style.marginBottom = '10px';
+      markPaidBtn.style.width = '100%';
+      markPaidBtn.addEventListener('click', () => promptIncomeReceipt(item.id));
       $('.modal-actions').before(markPaidBtn);
     }
   }
@@ -410,7 +567,7 @@
         deadlines.push({ id: uid(), description, amount, category, dueDate: date, note, recurring, paid: false, paidDate: null });
       }
       saveDeadlines();
-    } else {
+    } else if (modalType === 'installment') {
       if (editingId) {
         const item = installments.find((x) => x.id === editingId);
         Object.assign(item, { description, amount, category, startDate: date, endDate: dateEnd, note });
@@ -418,6 +575,23 @@
         installments.push({ id: uid(), description, amount, category, startDate: date, endDate: dateEnd, note });
       }
       saveInstallments();
+    } else if (modalType === 'income') {
+      if (editingId) {
+        const item = incomes.find((x) => x.id === editingId);
+        Object.assign(item, { description, amount, category, date, note });
+      } else {
+        incomes.push({ id: uid(), description, amount, category, date, note });
+      }
+      saveIncomes();
+    } else {
+      const recurring = $('#field-recurring').value;
+      if (editingId) {
+        const item = incomeSchedules.find((x) => x.id === editingId);
+        Object.assign(item, { description, amount, category, dueDate: date, note, recurring });
+      } else {
+        incomeSchedules.push({ id: uid(), description, amount, category, dueDate: date, note, recurring, paid: false, paidDate: null });
+      }
+      saveIncomeSchedules();
     }
 
     closeModal();
@@ -433,9 +607,15 @@
     } else if (modalType === 'deadline') {
       deadlines = deadlines.filter((x) => x.id !== editingId);
       saveDeadlines();
-    } else {
+    } else if (modalType === 'installment') {
       installments = installments.filter((x) => x.id !== editingId);
       saveInstallments();
+    } else if (modalType === 'income') {
+      incomes = incomes.filter((x) => x.id !== editingId);
+      saveIncomes();
+    } else {
+      incomeSchedules = incomeSchedules.filter((x) => x.id !== editingId);
+      saveIncomeSchedules();
     }
     closeModal();
     render();
@@ -478,9 +658,48 @@
     toast('Segnata come pagata');
   }
 
+  function promptIncomeReceipt(id) {
+    const item = incomeSchedules.find((x) => x.id === id);
+    if (!item) return;
+
+    const input = window.prompt(`Importo ricevuto per "${item.description}"`, item.amount);
+    if (input === null) return;
+    const amount = parseFloat(String(input).replace(',', '.'));
+    if (isNaN(amount) || amount <= 0) {
+      toast('Importo non valido');
+      return;
+    }
+
+    incomes.push({
+      id: uid(),
+      description: item.description,
+      amount,
+      category: item.category,
+      date: todayISO(),
+      note: item.note || ''
+    });
+    saveIncomes();
+
+    // Remember the (possibly edited) amount as the new expected default.
+    item.amount = amount;
+    if (item.recurring && item.recurring !== 'none') {
+      item.dueDate = nextDueDate(item.dueDate, item.recurring);
+      item.paid = false;
+      item.paidDate = null;
+    } else {
+      item.paid = true;
+      item.paidDate = todayISO();
+    }
+    saveIncomeSchedules();
+
+    closeModal();
+    render();
+    toast('Entrata registrata');
+  }
+
   // ---------- Export ----------
   $('#btn-export').addEventListener('click', () => {
-    const data = { expenses, deadlines, installments, exportedAt: new Date().toISOString() };
+    const data = { expenses, deadlines, installments, incomes, incomeSchedules, customCategories, exportedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

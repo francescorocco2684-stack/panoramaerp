@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ppc-v1';
+const CACHE_NAME = 'ppc-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -23,20 +23,19 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Network-first: always serve the freshest app when online, fall back to
+// cache only when offline. Avoids serving a stale shell after a deploy.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

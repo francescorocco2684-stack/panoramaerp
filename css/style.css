@@ -86,6 +86,9 @@ body {
 .card-label { font-size: 12px; color: var(--text-muted); }
 .card-value { font-size: 20px; font-weight: 700; }
 .card-da-pagare .card-value { color: var(--warning); }
+.card-entrate .card-value { color: var(--primary); }
+.card-saldo .card-value.positive { color: var(--primary); }
+.card-saldo .card-value.negative { color: var(--danger); }
 
 .panel {
   background: var(--surface);
