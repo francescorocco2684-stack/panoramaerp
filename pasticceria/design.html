@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pasticceria – Gestione Cassa (design)</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f7f1e8;
+    --surface: #fffdf9;
+    --surface-2: #f3ebdf;
+    --border: #e6dccd;
+    --text: #2b1d14;
+    --text-2: #6b5a4c;
+    --muted: #9a8a7c;
+    --brand: #7a3e1d;        /* cioccolato */
+    --brand-2: #a85a2c;
+    --accent: #e9c46a;       /* crema */
+    --pistacchio: #8aa34a;
+    /* data viz (palette di riferimento validata) */
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --grid: #ece4d7;
+    /* stati riservati */
+    --ok: #1f7a3a;   --ok-bg: #e3f3e6;
+    --warn: #9a6200; --warn-bg: #fdf0d2;
+    --bad: #b42323;  --bad-bg: #fbe3e1;
+    --info: #2a5ea8; --info-bg: #e3edfa;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Roboto, -apple-system, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+  h1, h2, h3 { margin: 0; }
+  .app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+
+  /* Sidebar */
+  aside { background: var(--brand); color: #fbeee2; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; }
+  .logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px 20px; }
+  .logo-mark { width: 38px; height: 38px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-size: 20px; }
+  .logo b { display: block; font-family: Georgia, serif; font-size: 17px; letter-spacing: .3px; }
+  .logo small { color: #e7cdb8; font-size: 11px; }
+  nav button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; color: #f3dfcf; font-size: 14px; }
+  nav button:hover { background: rgba(255,255,255,.08); }
+  nav button.active { background: #fffdf9; color: var(--brand); font-weight: 600; }
+  nav .ico { width: 20px; text-align: center; }
+  .side-foot { margin-top: auto; font-size: 12px; color: #e7cdb8; padding: 8px; border-top: 1px solid rgba(255,255,255,.15); }
+
+  /* Main */
+  main { padding: 22px 28px 40px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 16px; }
+  .topbar h1 { font-family: Georgia, serif; font-size: 26px; color: var(--brand); }
+  .topbar .sub { color: var(--text-2); margin-top: 2px; }
+  .top-actions { display: flex; gap: 8px; align-items: center; }
+  .search { border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 9px 12px; width: 240px; font: inherit; }
+  .btn { border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 9px 14px; border-radius: 10px; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.primary:hover { background: var(--brand-2); }
+  .btn.sm { padding: 5px 10px; font-size: 12px; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .grid { display: grid; gap: 16px; }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+  .g2 { grid-template-columns: 2fr 1fr; }
+  .g2e { grid-template-columns: 1fr 1fr; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .card h3 { font-size: 15px; margin-bottom: 4px; }
+  .card .hint { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+  .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+
+  /* KPI */
+  .kpi .label { color: var(--text-2); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  .kpi .value { font-size: 28px; font-weight: 700; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+  .kpi .delta { font-size: 12px; color: var(--text-2); }
+  .delta .up { color: var(--ok); font-weight: 600; }
+  .delta .down { color: var(--bad); font-weight: 600; }
+
+  /* Tabelle */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px; white-space: nowrap; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: #fbf6ef; }
+  .muted { color: var(--muted); }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .b-ok { background: var(--ok-bg); color: var(--ok); }
+  .b-warn { background: var(--warn-bg); color: var(--warn); }
+  .b-bad { background: var(--bad-bg); color: var(--bad); }
+  .b-info { background: var(--info-bg); color: var(--info); }
+  .b-neutral { background: var(--surface-2); color: var(--text-2); }
+  .stock-bar { height: 6px; background: var(--surface-2); border-radius: 4px; overflow: hidden; width: 90px; display: inline-block; vertical-align: middle; margin-right: 8px; }
+  .stock-bar i { display: block; height: 100%; border-radius: 4px; background: var(--pistacchio); }
+  .stock-bar i.low { background: var(--bad); }
+  .stock-bar i.mid { background: #d49a1c; }
+
+  .tabs { display: inline-flex; background: var(--surface-2); border-radius: 10px; padding: 3px; gap: 2px; }
+  .tabs button { all: unset; cursor: pointer; padding: 7px 14px; border-radius: 8px; font-weight: 600; color: var(--text-2); }
+  .tabs button.active { background: var(--surface); color: var(--brand); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--border); background: var(--surface); padding: 6px 12px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 13px; }
+  .chip.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+  /* Cassa */
+  .pos { display: grid; grid-template-columns: 1fr 360px; gap: 16px; align-items: start; }
+  .products { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .prod { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 12px; cursor: pointer; text-align: left; font: inherit; transition: transform .08s, box-shadow .08s; }
+  .prod:hover { box-shadow: 0 4px 12px rgba(122,62,29,.12); transform: translateY(-1px); }
+  .prod:active { transform: scale(.98); }
+  .prod .em { font-size: 30px; }
+  .prod .n { font-weight: 600; margin-top: 6px; }
+  .prod .p { color: var(--brand); font-weight: 700; margin-top: 2px; }
+  .prod .u { color: var(--muted); font-size: 12px; }
+  .receipt { position: sticky; top: 16px; }
+  .receipt .lines { min-height: 180px; max-height: 320px; overflow: auto; margin: 8px 0; }
+  .line { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+  .qty { display: inline-flex; align-items: center; gap: 6px; }
+  .qty button { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; font-weight: 700; }
+  .totals div { display: flex; justify-content: space-between; padding: 3px 0; color: var(--text-2); }
+  .totals .grand { font-size: 22px; font-weight: 700; color: var(--text); padding-top: 8px; border-top: 1px solid var(--border); margin-top: 6px; }
+  .pay { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .pay .btn { padding: 12px; }
+  .empty { text-align: center; color: var(--muted); padding: 50px 0; }
+
+  /* Fornitori */
+  .sup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .sup .row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+  .sup .row span:first-child { color: var(--muted); }
+  .avatar { width: 40px; height: 40px; border-radius: 10px; background: var(--surface-2); display: grid; place-items: center; font-size: 20px; }
+
+  /* Grafici */
+  .chart { position: relative; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart text { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  .legend { display: flex; gap: 16px; font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+  .legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+  .tip { position: absolute; pointer-events: none; background: #2b1d14; color: #fff; padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.5; white-space: nowrap; transform: translate(-50%, -110%); opacity: 0; transition: opacity .1s; z-index: 5; }
+  .tip b { font-weight: 600; }
+  .tip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+  .note { background: #fff7e6; border: 1px dashed #e0c48a; color: #7a5a1c; padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 16px; }
+
+  @media (max-width: 1000px) {
+    .app { grid-template-columns: 1fr; }
+    aside { position: static; height: auto; flex-direction: row; flex-wrap: wrap; }
+    .logo, .side-foot { display: none; }
+    .g4 { grid-template-columns: repeat(2, 1fr); }
+    .g2, .g2e, .pos { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="logo">
+      <div class="logo-mark">🧁</div>
+      <div><b>Pasticceria Panorama</b><small>Gestione cassa &amp; ERP</small></div>
+    </div>
+    <nav id="nav">
+      <button data-view="dashboard" class="active"><span class="ico">🏠</span>Dashboard</button>
+      <button data-view="cassa"><span class="ico">🧾</span>Cassa</button>
+      <button data-view="inventario"><span class="ico">📦</span>Inventario</button>
+      <button data-view="ordini"><span class="ico">🛒</span>Ordini d'acquisto</button>
+      <button data-view="fornitori"><span class="ico">🚚</span>Fornitori</button>
+      <button data-view="fatture"><span class="ico">📑</span>Fatturazione</button>
+      <button data-view="trend"><span class="ico">📈</span>Trend</button>
+    </nav>
+    <div class="side-foot">Cassa 01 · Operatore: Maria<br>Dom 1 novembre 2026</div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div>
+        <h1 id="title">Dashboard</h1>
+        <div class="sub" id="subtitle">Riepilogo della giornata e del mese</div>
+      </div>
+      <div class="top-actions">
+        <input class="search" placeholder="Cerca prodotto, fornitore, fattura…">
+        <button class="btn primary" data-goto="cassa">+ Nuova vendita</button>
+      </div>
+    </div>
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="view active" id="v-dashboard">
+      <div class="note">Mockup di design: i dati sono di esempio e non vengono salvati.</div>
+      <div class="grid g4">
+        <div class="card kpi"><div class="label">Incasso oggi</div><div class="value">€ 1.284,50</div><div class="delta"><span class="up">▲ 8,2%</span> vs domenica scorsa</div></div>
+        <div class="card kpi"><div class="label">Scontrini oggi</div><div class="value">146</div><div class="delta">Scontrino medio € 8,80</div></div>
+        <div class="card kpi"><div class="label">Incasso ottobre</div><div class="value">€ 31.920</div><div class="delta"><span class="up">▲ 4,1%</span> vs settembre</div></div>
+        <div class="card kpi"><div class="label">Fatture da pagare</div><div class="value">€ 6.418</div><div class="delta"><span class="down">2 scadute</span> · 5 in scadenza</div></div>
+      </div>
+
+      <div class="grid g2" style="margin-top:16px">
+        <div class="card">
+          <div class="card-head"><div><h3>Incassi vs costi, ultimi 12 mesi</h3><div class="hint">Euro al mese · passa il mouse per i dettagli</div></div><button class="btn sm" data-goto="trend">Vedi trend →</button></div>
+          <div class="legend"><span><i style="background:var(--series-1)"></i>Incassi</span><span><i style="background:var(--series-2)"></i>Costi (fatture passive)</span></div>
+          <div class="chart" id="chart-dash"></div>
+        </div>
+        <div class="card">
+          <h3>Avvisi</h3><div class="hint">Cose da fare oggi</div>
+          <table>
+            <tr><td><span class="badge b-bad">⛔ Sotto scorta</span></td><td>Ricotta di pecora — 2 kg</td></tr>
+            <tr><td><span class="badge b-bad">⛔ Sotto scorta</span></td><td>Pistacchio di Bronte — 0,8 kg</td></tr>
+            <tr><td><span class="badge b-warn">⚠ Scadenza</span></td><td>Panna fresca lotto 2210 — 03/11</td></tr>
+            <tr><td><span class="badge b-warn">⚠ Pagamento</span></td><td>Molino Bianchi — € 1.240 il 05/11</td></tr>
+            <tr><td><span class="badge b-info">ℹ Consegna</span></td><td>ODA-2026-118 attesa domani</td></tr>
+            <tr><td><span class="badge b-bad">⛔ SDI</span></td><td>Fattura FA-2026-212 scartata</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid g2e" style="margin-top:16px">
+        <div class="card">
+          <h3>Più venduti oggi</h3><div class="hint">Pezzi venduti</div>
+          <div class="chart" id="chart-top"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h3>Ultimi scontrini</h3><div class="hint">Cassa 01</div></div></div>
+          <table>
+            <thead><tr><th>N°</th><th>Ora</th><th>Articoli</th><th>Pagamento</th><th class="num">Totale</th></tr></thead>
+            <tbody>
+              <tr><td>0146</td><td>12:41</td><td>6 cannoli, 2 caffè</td><td><span class="badge b-neutral">💳 Carta</span></td><td class="num">€ 15,60</td></tr>
+              <tr><td>0145</td><td>12:38</td><td>Pastiera (1 kg)</td><td><span class="badge b-neutral">💶 Contanti</span></td><td class="num">€ 28,00</td></tr>
+              <tr><td>0144</td><td>12:30</td><td>4 sfogliatelle</td><td><span class="badge b-neutral">💳 Carta</span></td><td class="num">€ 8,00</td></tr>
+              <tr><td>0143</td><td>12:22</td><td>Vassoio mignon 500 g</td><td><span class="badge b-neutral">💶 Contanti</span></td><td class="num">€ 16,00</td></tr>
+              <tr><td>0142</td><td>12:15</td><td>2 babà, 1 cappuccino</td><td><span class="badge b-neutral">💳 Carta</span></td><td class="num">€ 5,80</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CASSA ============ -->
+    <section class="view" id="v-cassa">
+      <div class="pos">
+        <div>
+          <div class="toolbar">
+            <div class="chips" id="cat-chips">
+              <button class="chip active" data-cat="all">Tutti</button>
+              <button class="chip" data-cat="pasticceria">Pasticceria</button>
+              <button class="chip" data-cat="colazione">Colazione</button>
+              <button class="chip" data-cat="torte">Torte &amp; dolci a peso</button>
+              <button class="chip" data-cat="bar">Bar</button>
+            </div>
+          </div>
+          <div class="products" id="products"></div>
+        </div>
+        <div class="card receipt">
+          <div class="card-head"><div><h3>Scontrino n° 0147</h3><div class="hint">Cassa 01 · Maria</div></div><button class="btn sm" id="clear">Svuota</button></div>
+          <div class="lines" id="lines"></div>
+          <div class="totals">
+            <div><span>Imponibile</span><span id="t-net">€ 0,00</span></div>
+            <div><span>IVA 10%</span><span id="t-vat">€ 0,00</span></div>
+            <div class="grand"><span>Totale</span><span id="t-tot">€ 0,00</span></div>
+          </div>
+          <div class="pay">
+            <button class="btn">💶 Contanti</button>
+            <button class="btn">💳 Carta / POS</button>
+            <button class="btn">🎟 Buono</button>
+            <button class="btn primary">Emetti scontrino</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ INVENTARIO ============ -->
+    <section class="view" id="v-inventario">
+      <div class="toolbar">
+        <div class="tabs"><button class="active">Materie prime</button><button>Prodotti finiti</button><button>Packaging</button></div>
+        <div class="top-actions"><button class="btn">⇩ Esporta</button><button class="btn">Rettifica giacenza</button><button class="btn primary">+ Nuovo articolo</button></div>
+      </div>
+      <div class="grid g4" style="margin-bottom:16px">
+        <div class="card kpi"><div class="label">Articoli a magazzino</div><div class="value">84</div></div>
+        <div class="card kpi"><div class="label">Valore giacenza</div><div class="value">€ 7.940</div></div>
+        <div class="card kpi"><div class="label">Sotto scorta</div><div class="value" style="color:var(--bad)">3</div></div>
+        <div class="card kpi"><div class="label">In scadenza (7 gg)</div><div class="value" style="color:var(--warn)">5</div></div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Articolo</th><th>Categoria</th><th>Fornitore</th><th>Giacenza</th><th class="num">Scorta min.</th><th>Lotto / scadenza</th><th class="num">Costo unit.</th><th>Stato</th></tr></thead>
+          <tbody>
+            <tr><td><b>Farina 00 W300</b></td><td>Farine</td><td>Molino Bianchi</td><td><span class="stock-bar"><i style="width:78%"></i></span>125 kg</td><td class="num">50 kg</td><td>L-2610 · 03/2027</td><td class="num">€ 0,82/kg</td><td><span class="badge b-ok">✓ OK</span></td></tr>
+            <tr><td><b>Burro di centrifuga</b></td><td>Latticini</td><td>Latteria Alpina</td><td><span class="stock-bar"><i class="mid" style="width:38%"></i></span>18 kg</td><td class="num">15 kg</td><td>B-1029 · 20/11</td><td class="num">€ 9,40/kg</td><td><span class="badge b-warn">⚠ Quasi finito</span></td></tr>
+            <tr><td><b>Ricotta di pecora</b></td><td>Latticini</td><td>Caseificio Valle Verde</td><td><span class="stock-bar"><i class="low" style="width:12%"></i></span>2 kg</td><td class="num">8 kg</td><td>R-3110 · 04/11</td><td class="num">€ 7,20/kg</td><td><span class="badge b-bad">⛔ Sotto scorta</span></td></tr>
+            <tr><td><b>Pistacchio di Bronte DOP</b></td><td>Frutta secca</td><td>Agrumi di Sicilia</td><td><span class="stock-bar"><i class="low" style="width:10%"></i></span>0,8 kg</td><td class="num">2 kg</td><td>P-0926 · 09/2027</td><td class="num">€ 48,00/kg</td><td><span class="badge b-bad">⛔ Sotto scorta</span></td></tr>
+            <tr><td><b>Panna fresca 35%</b></td><td>Latticini</td><td>Latteria Alpina</td><td><span class="stock-bar"><i style="width:60%"></i></span>12 l</td><td class="num">6 l</td><td>P-2210 · 03/11</td><td class="num">€ 4,10/l</td><td><span class="badge b-warn">⚠ In scadenza</span></td></tr>
+            <tr><td><b>Zucchero semolato</b></td><td>Zuccheri</td><td>Molino Bianchi</td><td><span class="stock-bar"><i style="width:85%"></i></span>90 kg</td><td class="num">30 kg</td><td>Z-0801 · 08/2028</td><td class="num">€ 1,05/kg</td><td><span class="badge b-ok">✓ OK</span></td></tr>
+            <tr><td><b>Cioccolato fondente 70%</b></td><td>Cioccolato</td><td>Cacao &amp; Co.</td><td><span class="stock-bar"><i style="width:55%"></i></span>14 kg</td><td class="num">5 kg</td><td>C-7012 · 06/2027</td><td class="num">€ 14,50/kg</td><td><span class="badge b-ok">✓ OK</span></td></tr>
+            <tr><td><b>Uova fresche cat. A</b></td><td>Uova</td><td>Cascina Il Gelso</td><td><span class="stock-bar"><i class="low" style="width:18%"></i></span>90 pz</td><td class="num">180 pz</td><td>U-3010 · 18/11</td><td class="num">€ 0,28/pz</td><td><span class="badge b-bad">⛔ Sotto scorta</span></td></tr>
+            <tr><td><b>Canditi d'arancia</b></td><td>Frutta</td><td>Agrumi di Sicilia</td><td><span class="stock-bar"><i style="width:70%"></i></span>6 kg</td><td class="num">2 kg</td><td>A-0915 · 02/2027</td><td class="num">€ 11,00/kg</td><td><span class="badge b-ok">✓ OK</span></td></tr>
+            <tr><td><b>Vassoi dorati 25 cm</b></td><td>Packaging</td><td>Cartotecnica Rossi</td><td><span class="stock-bar"><i style="width:65%"></i></span>320 pz</td><td class="num">100 pz</td><td class="muted">—</td><td class="num">€ 0,35/pz</td><td><span class="badge b-ok">✓ OK</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ ORDINI D'ACQUISTO ============ -->
+    <section class="view" id="v-ordini">
+      <div class="toolbar">
+        <div class="chips"><button class="chip active">Tutti</button><button class="chip">Bozze</button><button class="chip">Inviati</button><button class="chip">Ricevuti</button><button class="chip">Annullati</button></div>
+        <div class="top-actions"><button class="btn">✨ Proponi ordine da sotto scorta</button><button class="btn primary">+ Nuovo ordine</button></div>
+      </div>
+      <div class="grid g2">
+        <div class="card">
+          <table>
+            <thead><tr><th>N° ordine</th><th>Data</th><th>Fornitore</th><th>Righe</th><th>Consegna prevista</th><th class="num">Totale</th><th>Stato</th></tr></thead>
+            <tbody>
+              <tr><td><b>ODA-2026-119</b></td><td>01/11</td><td>Caseificio Valle Verde</td><td>2</td><td>03/11</td><td class="num">€ 186,00</td><td><span class="badge b-neutral">✎ Bozza</span></td></tr>
+              <tr><td><b>ODA-2026-118</b></td><td>30/10</td><td>Agrumi di Sicilia</td><td>3</td><td>02/11</td><td class="num">€ 642,50</td><td><span class="badge b-info">✉ Inviato</span></td></tr>
+              <tr><td><b>ODA-2026-117</b></td><td>28/10</td><td>Latteria Alpina</td><td>4</td><td>29/10</td><td class="num">€ 512,80</td><td><span class="badge b-warn">◐ Ricevuto parz.</span></td></tr>
+              <tr><td><b>ODA-2026-116</b></td><td>25/10</td><td>Molino Bianchi</td><td>3</td><td>27/10</td><td class="num">€ 1.240,00</td><td><span class="badge b-ok">✓ Ricevuto</span></td></tr>
+              <tr><td><b>ODA-2026-115</b></td><td>22/10</td><td>Cartotecnica Rossi</td><td>5</td><td>26/10</td><td class="num">€ 388,20</td><td><span class="badge b-ok">✓ Ricevuto</span></td></tr>
+              <tr><td><b>ODA-2026-114</b></td><td>20/10</td><td>Cacao &amp; Co.</td><td>2</td><td>23/10</td><td class="num">€ 870,00</td><td><span class="badge b-ok">✓ Ricevuto</span></td></tr>
+              <tr><td><b>ODA-2026-113</b></td><td>18/10</td><td>Cascina Il Gelso</td><td>1</td><td>—</td><td class="num">€ 75,60</td><td><span class="badge b-bad">✕ Annullato</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h3>ODA-2026-119</h3><div class="hint">Bozza · Caseificio Valle Verde</div></div><span class="badge b-neutral">✎ Bozza</span></div>
+          <table>
+            <thead><tr><th>Articolo</th><th class="num">Q.tà</th><th class="num">Prezzo</th><th class="num">Totale</th></tr></thead>
+            <tbody>
+              <tr><td>Ricotta di pecora</td><td class="num">20 kg</td><td class="num">€ 7,20</td><td class="num">€ 144,00</td></tr>
+              <tr><td>Mascarpone</td><td class="num">6 kg</td><td class="num">€ 7,00</td><td class="num">€ 42,00</td></tr>
+            </tbody>
+          </table>
+          <div class="totals" style="margin-top:10px">
+            <div><span>Imponibile</span><span>€ 186,00</span></div>
+            <div><span>IVA 4%</span><span>€ 7,44</span></div>
+            <div class="grand"><span>Totale</span><span>€ 193,44</span></div>
+          </div>
+          <div class="pay"><button class="btn">Modifica</button><button class="btn primary">Invia via e-mail</button></div>
+          <p class="muted" style="font-size:12px;margin-top:10px">Alla ricezione la merce viene caricata in inventario e l'ordine si collega alla fattura passiva del fornitore.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FORNITORI ============ -->
+    <section class="view" id="v-fornitori">
+      <div class="toolbar">
+        <div class="chips"><button class="chip active">Tutti (6)</button><button class="chip">Latticini</button><button class="chip">Farine</button><button class="chip">Frutta secca</button><button class="chip">Packaging</button></div>
+        <button class="btn primary">+ Nuovo fornitore</button>
+      </div>
+      <div class="sup-grid" id="suppliers"></div>
+    </section>
+
+    <!-- ============ FATTURAZIONE ============ -->
+    <section class="view" id="v-fatture">
+      <div class="toolbar">
+        <div class="tabs" id="inv-tabs"><button class="active" data-t="attive">Fatture attive (emesse)</button><button data-t="passive">Fatture passive (ricevute)</button></div>
+        <div class="top-actions"><button class="btn">⇩ Esporta XML / CSV</button><button class="btn primary">+ Nuova fattura</button></div>
+      </div>
+      <div class="grid g4" style="margin-bottom:16px" id="inv-kpi"></div>
+      <div class="card"><table id="inv-table"></table></div>
+      <p class="muted" style="font-size:12px;margin-top:10px">Fatturazione elettronica tramite SDI (formato FatturaPA). Le fatture passive arrivano dal cassetto fiscale e si abbinano agli ordini d'acquisto.</p>
+    </section>
+
+    <!-- ============ TREND ============ -->
+    <section class="view" id="v-trend">
+      <div class="toolbar">
+        <div class="chips"><button class="chip">Mese</button><button class="chip">Trimestre</button><button class="chip active">12 mesi</button><button class="chip">Personalizzato</button></div>
+        <button class="btn">⇩ Esporta report</button>
+      </div>
+      <div class="grid g4" style="margin-bottom:16px">
+        <div class="card kpi"><div class="label">Incassi 12 mesi</div><div class="value">€ 402.600</div><div class="delta"><span class="up">▲ 6,3%</span> vs anno prec.</div></div>
+        <div class="card kpi"><div class="label">Costi 12 mesi</div><div class="value">€ 171.300</div><div class="delta"><span class="down">▲ 9,1%</span> vs anno prec.</div></div>
+        <div class="card kpi"><div class="label">Margine lordo</div><div class="value">57,5%</div><div class="delta">−1,2 punti</div></div>
+        <div class="card kpi"><div class="label">Mese migliore</div><div class="value">Dicembre</div><div class="delta">Panettoni e torte natalizie</div></div>
+      </div>
+      <div class="card">
+        <h3>Incassi vs costi</h3><div class="hint">Euro al mese, novembre 2025 – ottobre 2026</div>
+        <div class="legend"><span><i style="background:var(--series-1)"></i>Incassi</span><span><i style="background:var(--series-2)"></i>Costi (fatture passive)</span></div>
+        <div class="chart" id="chart-trend"></div>
+      </div>
+      <div class="grid g2e" style="margin-top:16px">
+        <div class="card">
+          <h3>Fatturato per categoria</h3><div class="hint">Ultimi 12 mesi, euro</div>
+          <div class="chart" id="chart-cat"></div>
+        </div>
+        <div class="card">
+          <h3>Incasso medio per fascia oraria</h3><div class="hint">Euro per ora, ultimi 30 giorni</div>
+          <div class="chart" id="chart-hours"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+// ---------- Utilità ----------
+const eur = (n, d = 2) => {
+  const [i, f] = Math.abs(n).toFixed(d).split('.');
+  return (n < 0 ? '−' : '') + '€ ' + i.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (f ? ',' + f : '');
+};
+const $ = s => document.querySelector(s);
+
+// ---------- Navigazione ----------
+const titles = {
+  dashboard: ['Dashboard', 'Riepilogo della giornata e del mese'],
+  cassa: ['Cassa', 'Tocca un prodotto per aggiungerlo allo scontrino'],
+  inventario: ['Inventario', 'Materie prime, prodotti finiti e packaging'],
+  ordini: ["Ordini d'acquisto", 'Ordini ai fornitori e ricevimento merce'],
+  fornitori: ['Registro fornitori', 'Anagrafiche, condizioni di pagamento e saldo'],
+  fatture: ['Fatturazione', 'Fatture attive e passive, stato SDI e scadenze'],
+  trend: ['Trend', 'Andamento di incassi, costi e vendite']
+};
+function show(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'v-' + view));
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  $('#title').textContent = titles[view][0];
+  $('#subtitle').textContent = titles[view][1];
+  renderCharts();
+}
+document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => show(b.dataset.view));
+document.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => show(b.dataset.goto));
+
+// ---------- Cassa ----------
+const products = [
+  { n: 'Cannolo siciliano', p: 2.20, e: '🥖', c: 'pasticceria', u: 'al pezzo' },
+  { n: 'Sfogliatella riccia', p: 2.00, e: '🐚', c: 'pasticceria', u: 'al pezzo' },
+  { n: 'Babà al rum', p: 2.30, e: '🍮', c: 'pasticceria', u: 'al pezzo' },
+  { n: 'Bignè alla crema', p: 1.50, e: '🟡', c: 'pasticceria', u: 'al pezzo' },
+  { n: 'Cassatina', p: 3.00, e: '🍰', c: 'pasticceria', u: 'al pezzo' },
+  { n: 'Cornetto vuoto', p: 1.20, e: '🥐', c: 'colazione', u: 'al pezzo' },
+  { n: 'Cornetto pistacchio', p: 1.80, e: '🥐', c: 'colazione', u: 'al pezzo' },
+  { n: 'Maritozzo con panna', p: 2.80, e: '🍞', c: 'colazione', u: 'al pezzo' },
+  { n: 'Tiramisù', p: 32.00, e: '☕', c: 'torte', u: 'al kg' },
+  { n: 'Pastiera napoletana', p: 28.00, e: '🥧', c: 'torte', u: 'al kg' },
+  { n: 'Pasticcini mignon', p: 32.00, e: '🧁', c: 'torte', u: 'al kg' },
+  { n: 'Cantucci', p: 24.00, e: '🍪', c: 'torte', u: 'al kg' },
+  { n: 'Caffè espresso', p: 1.20, e: '☕', c: 'bar', u: 'tazza' },
+  { n: 'Cappuccino', p: 1.60, e: '🥛', c: 'bar', u: 'tazza' },
+  { n: 'Spremuta d\'arancia', p: 3.50, e: '🍊', c: 'bar', u: 'bicchiere' },
+];
+let cart = [{ i: 0, q: 3 }, { i: 1, q: 2 }, { i: 13, q: 1 }];
+let cat = 'all';
+function renderProducts() {
+  $('#products').innerHTML = products.map((p, i) => (cat === 'all' || p.c === cat) ? `
+    <button class="prod" data-i="${i}"><div class="em">${p.e}</div><div class="n">${p.n}</div>
+    <div class="p">${eur(p.p)}</div><div class="u">${p.u}</div></button>` : '').join('');
+  document.querySelectorAll('.prod').forEach(b => b.onclick = () => {
+    const i = +b.dataset.i, l = cart.find(x => x.i === i);
+    l ? l.q++ : cart.push({ i, q: 1 }); renderCart();
+  });
+}
+function renderCart() {
+  if (!cart.length) { $('#lines').innerHTML = '<div class="empty">Nessun articolo.<br>Tocca un prodotto a sinistra.</div>'; }
+  else $('#lines').innerHTML = cart.map((l, k) => {
+    const p = products[l.i];
+    return `<div class="line"><div><b>${p.n}</b><div class="muted" style="font-size:12px">${eur(p.p)} ${p.u}</div></div>
+      <div class="qty"><button data-k="${k}" data-d="-1">−</button>${l.q}<button data-k="${k}" data-d="1">+</button></div>
+      <div style="min-width:64px;text-align:right;font-weight:600">${eur(p.p * l.q)}</div></div>`;
+  }).join('');
+  document.querySelectorAll('.qty button').forEach(b => b.onclick = () => {
+    const l = cart[+b.dataset.k]; l.q += +b.dataset.d;
+    if (l.q <= 0) cart.splice(+b.dataset.k, 1); renderCart();
+  });
+  const tot = cart.reduce((s, l) => s + products[l.i].p * l.q, 0), net = tot / 1.10;
+  $('#t-net').textContent = eur(net); $('#t-vat').textContent = eur(tot - net); $('#t-tot').textContent = eur(tot);
+}
+document.querySelectorAll('#cat-chips .chip').forEach(c => c.onclick = () => {
+  document.querySelectorAll('#cat-chips .chip').forEach(x => x.classList.remove('active'));
+  c.classList.add('active'); cat = c.dataset.cat; renderProducts();
+});
+$('#clear').onclick = () => { cart = []; renderCart(); };
+renderProducts(); renderCart();
+
+// ---------- Fornitori ----------
+const suppliers = [
+  { n: 'Molino Bianchi srl', e: '🌾', c: 'Farine e zuccheri', piva: '01234560157', tel: '02 1234567', pay: 'Bonifico 30 gg d.f.', saldo: 1240, ord: 14 },
+  { n: 'Latteria Alpina soc. coop.', e: '🧈', c: 'Latticini', piva: '02345670218', tel: '0461 223344', pay: 'RiBa 60 gg', saldo: 512.8, ord: 22 },
+  { n: 'Caseificio Valle Verde', e: '🧀', c: 'Latticini', piva: '03456780653', tel: '089 556677', pay: 'Bonifico vista fattura', saldo: 0, ord: 18 },
+  { n: 'Agrumi di Sicilia sas', e: '🍊', c: 'Frutta secca e canditi', piva: '04567890871', tel: '095 778899', pay: 'Bonifico 30 gg d.f.', saldo: 642.5, ord: 9 },
+  { n: 'Cacao & Co. srl', e: '🍫', c: 'Cioccolato', piva: '05678900011', tel: '011 445566', pay: 'Bonifico 60 gg f.m.', saldo: 870, ord: 7 },
+  { n: 'Cartotecnica Rossi', e: '📦', c: 'Packaging', piva: '06789010487', tel: '055 112233', pay: 'RiBa 30 gg', saldo: 0, ord: 6 },
+];
+$('#suppliers').innerHTML = suppliers.map(s => `
+  <div class="card sup">
+    <div class="card-head"><div style="display:flex;gap:10px;align-items:center"><div class="avatar">${s.e}</div>
+      <div><h3>${s.n}</h3><div class="muted" style="font-size:12px">${s.c}</div></div></div>
+      ${s.saldo ? '<span class="badge b-warn">Da pagare</span>' : '<span class="badge b-ok">✓ In regola</span>'}</div>
+    <div class="row"><span>P.IVA</span><span>IT${s.piva}</span></div>
+    <div class="row"><span>Telefono</span><span>${s.tel}</span></div>
+    <div class="row"><span>Pagamento</span><span>${s.pay}</span></div>
+    <div class="row"><span>Ordini nel 2026</span><span>${s.ord}</span></div>
+    <div class="row"><span>Saldo aperto</span><b>${eur(s.saldo)}</b></div>
+    <div class="pay"><button class="btn sm">Scheda</button><button class="btn sm">+ Ordine</button></div>
+  </div>`).join('');
+
+// ---------- Fatturazione ----------
+const invoices = {
+  attive: {
+    kpi: [['Emesse a ottobre', '24'], ['Totale emesso', '€ 4.860'], ['Da incassare', '€ 1.320'], ['Scartate SDI', '1']],
+    head: ['N° fattura', 'Data', 'Cliente', 'Descrizione', 'Imponibile', 'IVA', 'Totale', 'SDI', 'Incasso'],
+    rows: [
+      ['FA-2026-214', '31/10', 'Hotel Belvedere srl', 'Colazioni ottobre', 818.18, 81.82, 900, ['b-ok', '✓ Consegnata'], ['b-warn', 'Scade 30/11']],
+      ['FA-2026-213', '29/10', 'Comune di Montalto', 'Rinfresco evento', 381.82, 38.18, 420, ['b-ok', '✓ Consegnata'], ['b-warn', 'Scade 28/11']],
+      ['FA-2026-212', '27/10', 'Bar Centrale snc', 'Fornitura cornetti', 263.64, 26.36, 290, ['b-bad', '✕ Scartata'], ['b-neutral', '—']],
+      ['FA-2026-211', '25/10', 'Studio Ferri & Associati', 'Torta aziendale 4 kg', 116.36, 11.64, 128, ['b-ok', '✓ Consegnata'], ['b-ok', '✓ Incassata']],
+      ['FA-2026-210', '20/10', 'Ristorante Da Gino', 'Dessert settimana 42', 345.45, 34.55, 380, ['b-ok', '✓ Consegnata'], ['b-ok', '✓ Incassata']],
+      ['FA-2026-209', '18/10', 'Matrimonio Rossi – Bianchi', 'Torta nuziale + confettata', 1272.73, 127.27, 1400, ['b-info', '✉ Inviata'], ['b-ok', '✓ Incassata']],
+    ]
+  },
+  passive: {
+    kpi: [['Ricevute a ottobre', '31'], ['Totale ricevuto', '€ 14.210'], ['Da pagare', '€ 6.418'], ['Scadute', '2']],
+    head: ['N° fattura', 'Data', 'Fornitore', 'Ordine collegato', 'Imponibile', 'IVA', 'Totale', 'Registrazione', 'Pagamento'],
+    rows: [
+      ['2026/1187', '27/10', 'Molino Bianchi srl', 'ODA-2026-116', 1192.31, 47.69, 1240, ['b-ok', '✓ Registrata'], ['b-warn', 'Scade 05/11']],
+      ['FV-0934', '29/10', 'Latteria Alpina', 'ODA-2026-117', 493.08, 19.72, 512.8, ['b-ok', '✓ Registrata'], ['b-warn', 'Scade 28/12']],
+      ['A-552', '23/10', 'Cacao & Co. srl', 'ODA-2026-114', 713.11, 156.89, 870, ['b-ok', '✓ Registrata'], ['b-warn', 'Scade 31/12']],
+      ['118/26', '26/10', 'Cartotecnica Rossi', 'ODA-2026-115', 318.20, 70.00, 388.2, ['b-info', '⏳ Da registrare'], ['b-ok', '✓ Pagata']],
+      ['E-2290', '05/10', 'Enel Energia', '—', 1065.57, 234.43, 1300, ['b-ok', '✓ Registrata'], ['b-bad', '⛔ Scaduta 25/10']],
+      ['2026-77', '01/10', 'Immobiliare Corso srl', 'Affitto locale', 1600, 352, 1952, ['b-ok', '✓ Registrata'], ['b-bad', '⛔ Scaduta 10/10']],
+    ]
+  }
+};
+function renderInvoices(t) {
+  const d = invoices[t];
+  $('#inv-kpi').innerHTML = d.kpi.map(([l, v]) => `<div class="card kpi"><div class="label">${l}</div><div class="value">${v}</div></div>`).join('');
+  $('#inv-table').innerHTML = '<thead><tr>' + d.head.map((h, i) => `<th class="${i >= 4 && i <= 6 ? 'num' : ''}">${h}</th>`).join('') + '</tr></thead><tbody>' +
+    d.rows.map(r => `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td class="muted">${r[3]}</td>
+      <td class="num">${eur(r[4])}</td><td class="num">${eur(r[5])}</td><td class="num"><b>${eur(r[6])}</b></td>
+      <td><span class="badge ${r[7][0]}">${r[7][1]}</span></td><td><span class="badge ${r[8][0]}">${r[8][1]}</span></td></tr>`).join('') + '</tbody>';
+}
+document.querySelectorAll('#inv-tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#inv-tabs button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); renderInvoices(b.dataset.t);
+});
+renderInvoices('attive');
+
+// ---------- Grafici (SVG) ----------
+const months = ['Nov 25', 'Dic 25', 'Gen 26', 'Feb 26', 'Mar 26', 'Apr 26', 'Mag 26', 'Giu 26', 'Lug 26', 'Ago 26', 'Set 26', 'Ott 26'];
+const incassi = [31200, 52400, 27800, 30100, 32600, 44900, 34200, 31500, 27400, 19800, 30700, 31920];
+const costi   = [13400, 21800, 12100, 12600, 13900, 18700, 14300, 13200, 11800, 9200, 14100, 14210];
+const svgNS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent) => { const e = document.createElementNS(svgNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
+const kfmt = v => v >= 1000 ? String(v / 1000).replace('.', ',') + 'k' : v;
+
+function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v / p / 2) * p * 2; }
+
+function lineChart(host, labels, series, h = 260) {
+  host.innerHTML = '';
+  const W = host.clientWidth || 600, H = h, m = { t: 14, r: 70, b: 26, l: 44 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const max = niceMax(Math.max(...series.flatMap(s => s.data)));
+  const x = i => m.l + (iw * i) / (labels.length - 1), y = v => m.t + ih - (ih * v) / max;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': series.map(s => s.name).join(' e ') + ' per mese' }, host);
+  for (let k = 0; k <= 4; k++) {
+    const v = (max / 4) * k;
+    el('line', { x1: m.l, x2: m.l + iw, y1: y(v), y2: y(v), stroke: k ? 'var(--grid)' : '#cdbfae', 'stroke-width': 1 }, svg);
+    el('text', { x: m.l - 8, y: y(v) + 4, 'text-anchor': 'end' }, svg).textContent = kfmt(v);
+  }
+  labels.forEach((l, i) => { if (i % 2 === 0 || labels.length < 8) el('text', { x: x(i), y: H - 6, 'text-anchor': 'middle' }, svg).textContent = l; });
+  series.forEach(s => {
+    el('path', { d: s.data.map((v, i) => (i ? 'L' : 'M') + x(i) + ',' + y(v)).join(''), fill: 'none', stroke: s.color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+    const last = s.data.length - 1;
+    el('circle', { cx: x(last), cy: y(s.data[last]), r: 4, fill: s.color, stroke: 'var(--surface)', 'stroke-width': 2 }, svg);
+    const t = el('text', { x: x(last) + 8, y: y(s.data[last]) + 4 }, svg); t.textContent = s.name; t.style.fill = 'var(--text-2)';
+  });
+  // hover: crosshair + tooltip
+  const cross = el('line', { y1: m.t, y2: m.t + ih, stroke: '#b9a894', 'stroke-dasharray': '3 3', opacity: 0 }, svg);
+  const dots = series.map(s => el('circle', { r: 5, fill: s.color, stroke: 'var(--surface)', 'stroke-width': 2, opacity: 0 }, svg));
+  const tip = document.createElement('div'); tip.className = 'tip'; host.appendChild(tip);
+  const hit = el('rect', { x: m.l, y: m.t, width: iw, height: ih, fill: 'transparent' }, svg);
+  hit.addEventListener('mousemove', ev => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * (W / r.width);
+    const i = Math.max(0, Math.min(labels.length - 1, Math.round(((px - m.l) / iw) * (labels.length - 1))));
+    cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('opacity', 1);
+    dots.forEach((d, k) => { d.setAttribute('cx', x(i)); d.setAttribute('cy', y(series[k].data[i])); d.setAttribute('opacity', 1); });
+    tip.innerHTML = `<b>${labels[i]}</b><br>` + series.map(s => `<span class="sw" style="background:${s.color}"></span>${s.name}: ${eur(s.data[i], 0)}`).join('<br>');
+    tip.style.left = (x(i) / W) * r.width + 'px'; tip.style.top = (y(Math.max(...series.map(s => s.data[i]))) / H) * r.height + 'px'; tip.style.opacity = 1;
+  });
+  hit.addEventListener('mouseleave', () => { cross.setAttribute('opacity', 0); dots.forEach(d => d.setAttribute('opacity', 0)); tip.style.opacity = 0; });
+}
+
+function hBarChart(host, items, fmt, color = 'var(--series-1)') {
+  host.innerHTML = '';
+  const W = host.clientWidth || 400, bh = 22, gap = 10, m = { l: 130, r: 70 }, H = items.length * (bh + gap);
+  const max = Math.max(...items.map(d => d.v)), iw = W - m.l - m.r;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img' }, host);
+  const tip = document.createElement('div'); tip.className = 'tip'; host.appendChild(tip);
+  items.forEach((d, i) => {
+    const y0 = i * (bh + gap), w = Math.max(4, (iw * d.v) / max);
+    const lab = el('text', { x: m.l - 10, y: y0 + bh / 2 + 4, 'text-anchor': 'end' }, svg); lab.textContent = d.l; lab.style.fill = 'var(--text-2)'; lab.style.fontSize = '12px';
+    el('path', { d: `M${m.l},${y0} h${w - 4} a4,4 0 0 1 4,4 v${bh - 8} a4,4 0 0 1 -4,4 h${-(w - 4)} z`, fill: color }, svg);
+    el('text', { x: m.l + w + 8, y: y0 + bh / 2 + 4 }, svg).textContent = fmt(d.v);
+    const hit = el('rect', { x: 0, y: y0 - gap / 2, width: W, height: bh + gap, fill: 'transparent' }, svg);
+    hit.addEventListener('mousemove', () => {
+      const r = svg.getBoundingClientRect();
+      tip.innerHTML = `<b>${d.l}</b><br>${fmt(d.v)}${d.extra ? '<br>' + d.extra : ''}`;
+      tip.style.left = ((m.l + w / 2) / W) * r.width + 'px'; tip.style.top = (y0 / H) * r.height + 'px'; tip.style.opacity = 1;
+    });
+    hit.addEventListener('mouseleave', () => tip.style.opacity = 0);
+  });
+}
+
+function vBarChart(host, labels, data, h = 220) {
+  host.innerHTML = '';
+  const W = host.clientWidth || 400, H = h, m = { t: 10, r: 8, b: 24, l: 40 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, max = niceMax(Math.max(...data));
+  const slot = iw / data.length, bw = Math.max(6, slot - 4);
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img' }, host);
+  const tip = document.createElement('div'); tip.className = 'tip'; host.appendChild(tip);
+  for (let k = 0; k <= 4; k++) {
+    const v = (max / 4) * k, yy = m.t + ih - (ih * v) / max;
+    el('line', { x1: m.l, x2: m.l + iw, y1: yy, y2: yy, stroke: k ? 'var(--grid)' : '#cdbfae' }, svg);
+    el('text', { x: m.l - 8, y: yy + 4, 'text-anchor': 'end' }, svg).textContent = v;
+  }
+  data.forEach((v, i) => {
+    const bhh = (ih * v) / max, x0 = m.l + i * slot + 2, y0 = m.t + ih - bhh;
+    el('path', { d: `M${x0},${m.t + ih} v${-(bhh - 4)} a4,4 0 0 1 4,-4 h${bw - 8} a4,4 0 0 1 4,4 v${bhh - 4} z`, fill: 'var(--series-1)' }, svg);
+    if (i % 2 === 0) el('text', { x: x0 + bw / 2, y: H - 6, 'text-anchor': 'middle' }, svg).textContent = labels[i];
+    const hit = el('rect', { x: m.l + i * slot, y: m.t, width: slot, height: ih, fill: 'transparent' }, svg);
+    hit.addEventListener('mousemove', () => {
+      const r = svg.getBoundingClientRect();
+      tip.innerHTML = `<b>Ore ${labels[i]}:00</b><br>${eur(v, 0)} medi`;
+      tip.style.left = ((x0 + bw / 2) / W) * r.width + 'px'; tip.style.top = (y0 / H) * r.height + 'px'; tip.style.opacity = 1;
+    });
+    hit.addEventListener('mouseleave', () => tip.style.opacity = 0);
+  });
+}
+
+const S = [{ name: 'Incassi', data: incassi, color: 'var(--series-1)' }, { name: 'Costi', data: costi, color: 'var(--series-2)' }];
+function renderCharts() {
+  const vis = id => document.getElementById(id).offsetParent !== null;
+  if (vis('chart-dash')) {
+    lineChart($('#chart-dash'), months, S, 240);
+    hBarChart($('#chart-top'), [
+      { l: 'Cornetto vuoto', v: 64 }, { l: 'Cannolo siciliano', v: 41 }, { l: 'Sfogliatella', v: 33 },
+      { l: 'Cornetto pistacchio', v: 28 }, { l: 'Babà al rum', v: 19 }, { l: 'Maritozzo', v: 12 }], v => v + ' pz');
+  }
+  if (vis('chart-trend')) {
+    lineChart($('#chart-trend'), months, S, 300);
+    hBarChart($('#chart-cat'), [
+      { l: 'Pasticceria fresca', v: 148200 }, { l: 'Torte su ordinazione', v: 96400 }, { l: 'Colazione', v: 71300 },
+      { l: 'Lievitati da ricorrenza', v: 48900, extra: 'Panettoni, colombe' }, { l: 'Bar', v: 26100 }, { l: 'Biscotteria', v: 11700 }], v => eur(v, 0));
+    vBarChart($('#chart-hours'), ['7','8','9','10','11','12','13','14','15','16','17','18','19','20'],
+      [62, 148, 131, 84, 96, 142, 88, 36, 41, 67, 104, 128, 97, 39]);
+  }
+}
+renderCharts();
+window.addEventListener('resize', renderCharts);
+</script>
+</body>
+</html>
